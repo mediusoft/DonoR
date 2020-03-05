@@ -202,6 +202,7 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: theme.colors.primary,
+    paddingTop: Platform.OS === 'android' ? 25 : 0
   },
   headerChart: {
     paddingTop: 30,
