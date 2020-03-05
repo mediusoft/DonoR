@@ -13,7 +13,7 @@
   * [ ] Filter with blood group
   * [ ] Filter with blood availability according to last donation date
 
-** Security**
+**Security**
 * [ ] Login
   * [ ] Full security with OAuth2
   * [ ] Login with Facebook
