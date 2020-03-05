@@ -1,225 +1,236 @@
-import React, { Component } from "react";
-import { TouchableOpacity, StyleSheet, Alert, Picker } from 'react-native';
-import { Container, View, Header, Content, Text, Left, Right, Body, Title, Item, Input, Button, List, ListItem, } from "native-base";
-import Communications from 'react-native-communications';
-export default class App extends Component {
+import React from 'react';
+import {
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  Image,
+  TouchableOpacity
+} from 'react-native';
+import {Block, Text} from './components/index'
+import {LineChart, Path} from 'react-native-svg-charts'
+import {Line} from 'react-native-svg'
+import * as shape from 'd3-shape'
+import * as theme from './theme'
+import * as mock from './mock'
+import * as Font from "expo-font";
+import { AppLoading } from 'expo';
+
+
+const cacheFonts = () => {
+  console.log("at")
+  return [
+    Font.loadAsync({
+      Montserrat_Light: require("./assets/fonts/Montserrat-Light.ttf"),
+      Montserrat_Regular: require("./assets/fonts/Montserrat-Regular.ttf"),
+      Montserrat_Medium: require("./assets/fonts/Montserrat-Medium.ttf"),
+      Montserrat_SemiBold: require("./assets/fonts/Montserrat-SemiBold.ttf"),
+      Montserrat_Bold: require("./assets/fonts/Montserrat-Bold.ttf")
+    })
+  ];
+};
+
+
+export default class App extends React.Component {
 
   constructor(props) {
     super(props);
+
     this.state = {
-      isSubmited: false,
-      name: null,
-      mobile: null,
-      group: null,
-      donors: [],
-      grouptoBeFiltered: null,
+      isLoadingComplete: false
     };
   }
 
-  componentDidMount() {
-    this.timer=setInterval(() =>this.getDonor(), 1000);
-  }
-  
-  async getDonor() {     
-        return fetch(`https://blood-donors-db.firebaseio.com/donors.json`)
-        .then((response) => response.json())
-        .then((responseJson) => {
-          this.setState({
-            donors: Object.values(responseJson),
-          });
-        })
-        .catch((error) => {
-          console.error(error);
-        });   
-  }
+  _setUpDependenciesAsync = async () => {
 
-  addDonor = (name, mobile, group) => {
-    if(this.state.name != null && this.state.mobile != null && this.state.group != null){ 
-      fetch('https://blood-donors-db.firebaseio.com/donors.json', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          "name": name,
-          "mobile": mobile,
-          "group": group,
-        }),
-      })
-      .then((response) => response.json())
-      .then((responseData) => {
-              if(responseData.name != null ){
-                this.setState({
-                    name: null,
-                    mobile: null,
-                    group: null,
-                    isSubmited: true,
-                  })              
-              }
-              else{
-              Alert.alert(
-                'Oops !',
-                'Something went wrong',
-                [
-                  {text: 'OK', onPress: () => console.log('Cancel Pressed'), style: 'cancel'},
-                ],
-                { cancelable: false }
-              )
-            }
+    await Promise.all([ ...cacheFonts()]);
 
-      })
-      .done();
-    }
-      else{
-        Alert.alert(
-          'Oops !',
-          'You forgot some field. Please fill it before submitting',
-          [
-            {text: 'OK', onPress: () => console.log('Cancel Pressed'), style: 'cancel'},
-          ],
-          { cancelable: false }
-        )        
-      }
-    
   };
 
-  onValueChange(value) {
-    this.setState({
-      group: value
-    });
+  
+  _handleLoadingFinish = () => {
+    this.setState({ isLoadingComplete: true });
+  };
+
+
+  render(){
+    const { isLoadingComplete } = this.state;
+
+    if (!isLoadingComplete ) {
+      return (
+        <AppLoading
+          startAsync={this._setUpDependenciesAsync}
+          onFinish={this._handleLoadingFinish}
+        />
+      );
+    }
+
+    return (
+      <SafeAreaView style={styles.safe}>
+        {this.renderHeader()}
+        {this.renderRequests()}
+      </SafeAreaView>
+    )
   }
 
-    onValueChange2(value) {
-      this.setState({
-        grouptoBeFiltered: value
-      });
-    }
-
-    _toggleDonorPost(){
-        this.setState({
-            isSubmited: false
-        })
-    }
-
-  render() {
+  renderChart(){
+    const { chart } = this.props;
+    const LineShadow = ({ line }) => (
+      <Path
+        d={line}
+        fill="none"
+        stroke={theme.colors.primary}
+        strokeWidth={7}
+        strokeOpacity={0.07}
+      />
+    );
     return (
-      <Container>
-
-        <Header androidStatusBarColor="#af1313" style={{ backgroundColor: '#d11919' }}>
-          <Body style = {{ flex: 1, flexDirection: 'column', justifyContent: 'center', alignItems: 'center', }}>
-            <Title>BLOOD DONORS</Title>
-          </Body>
-        </Header>
-
-        <Content style = {{ marginLeft: 10, marginRight:10 }}>
-          <View style = {{ backgroundColor:"#f2eded", marginTop: 10 }}>
-          {this.state.isSubmited
-          ? 
-            <TouchableOpacity onPress = { () => this._toggleDonorPost()}>
-              <Text style = {{ fontSize:20, color:'#770707' }}>Add more donors</Text>
-            </TouchableOpacity>
-          :
-            <View style = {{ paddingLeft: 20, paddingRight: 20, paddingBottom: 40  }}>
-
-              <View style = {{ flex: 1, flexDirection: 'column', justifyContent: 'center', alignItems: 'center', marginTop:20 }}>
-                <Text style = {{ fontSize:15, fontWeight: 'bold', color:'#e89494', }}>DONATE YOUR BLOOD</Text>
-              </View>
-
-              <Item rounded style = {{ marginBottom: 20, marginTop:20 }}>
-                <Input placeholder="Name" 
-                onChangeText={input => this.setState({ name: input })} 
-                />
-              </Item>
-
-              <Item rounded style = {{ marginBottom: 20, marginTop:20 }}>
-                <Input placeholder="Mobile" 
-                onChangeText={input => this.setState({ mobile: input })} 
-                keyboardType = { "phone-pad" }
-                />
-              </Item>
-
-              <View style = { styles.picker }>
-                <Picker
-                    selectedValue={ (this.state.group && this.state.pickerValue) || 'a'}
-                    onValueChange={this.onValueChange.bind(this)}>
-                    <Picker.Item label="Blood Group" value="null" />
-                      <Picker.Item label="A+" value="A+" />
-                      <Picker.Item label="A-" value="A-" />
-                      <Picker.Item label="B+" value="B+" />
-                      <Picker.Item label="B-" value="B-" />
-                      <Picker.Item label="AB+" value="AB+" />
-                      <Picker.Item label="AB-" value="AB-" />
-                      <Picker.Item label="O+" value="O+" />
-                      <Picker.Item label="O-" value="O-" />
-                </Picker>
-              </View>
-
-              <Button block light onPress={ () => this.addDonor(this.state.name, this.state.mobile, this.state.group) } style = {{ marginLeft: 30, marginRight:30 }}>
-                  <Text>Submit</Text>
-              </Button>
-            </View>
-          }
-        </View>
-
-        <View>
-          <View style = {{ flex: 1, flexDirection: 'column', justifyContent: 'center', alignItems: 'center', marginTop:20, marginBottom: 10 }}>
-            <Text style = {{ fontSize:15, fontWeight: 'bold', color:'#e89494', }}>DONORS</Text>
-          </View>
-          
-          <View style = { styles.picker }>
-            <Picker
-                selectedValue={ (this.state.grouptoBeFiltered && this.state.pickerValue) || 'a'}
-                onValueChange={this.onValueChange2.bind(this)}>
-                <Picker.Item label="Blood Group" value="null" />
-                  <Picker.Item label="A+" value="A+" />
-                  <Picker.Item label="A-" value="A-" />
-                  <Picker.Item label="B+" value="B+" />
-                  <Picker.Item label="B-" value="B-" />
-                  <Picker.Item label="AB+" value="AB+" />
-                  <Picker.Item label="AB-" value="AB-" />
-                  <Picker.Item label="O+" value="O+" />
-                  <Picker.Item label="O-" value="O-" />
-            </Picker>
-          </View>
-
-        </View>
-        {this.state.grouptoBeFiltered == null
-        ?
-        null
-        :
-        <View>
-                {this.state.donors.filter( element => element.group ==this.state.grouptoBeFiltered).map((item, index) => (
-                <List>
-                  <ListItem thumbnail>
-                    <Left>
-                    </Left>
-                    <Body>
-                      <Text>{item.name} ({item.group})</Text>
-                      <Text note numberOfLines={1}>Mob: {item.mobile}</Text>
-                    </Body>
-                    <Right>
-                      <Button transparent onPress={() => Communications.phonecall(`${item.mobile}`, true)}>
-                        <Text>Call</Text>
-                      </Button>
-                    </Right>
-                  </ListItem>
-                </List>       
-                ))}
-        </View>
-      }
-        </Content>
-      </Container>
+      <LineChart
+        yMin={0}
+        yMax={10}
+        style={{ flex: 2}}
+        curve={shape.curveMonotoneX}
+        data={chart}
+        svg={{ 
+          stroke: theme.colors.primary,
+          strokeWidth: 1.25,
+        }}
+        contentInset={{left: theme.sizes.base, right: theme.sizes.base}}
+      >
+        <LineShadow belowChart={true} />
+        <Line
+          key="zero-axis"
+          x1="0%"
+          x2="100%"
+          y1="50%"
+          y2="50%"
+          belowChart={true}
+          stroke={theme.colors.gray}
+          strokeDasharray={[2, 10]}
+          strokeWidth={1}
+        />
+      </LineChart>
     );
   }
+
+  renderHeader() {
+    const { user } = this.props;
+    return (
+      <Block flex={0.42} column style={{paddingHorizontal: 15,}}>
+        <Block flex={false} row style={{paddingVertical: 15,}}>
+          <Block center>
+            <Text h3 white style={{marginRight: -(25 + 5)}}>Blood Requests</Text>           
+          </Block>
+          <Image style={styles.avatar} source={user.avatar}/>
+        </Block>
+        <Block card shadow color="white" style={styles.headerChart}>
+          <Block row space="between" style={{paddingHorizontal: 30}}>
+            <Block row center flex={false}>
+              <Text h1>291 </Text>
+              <Text caption bold tertiary style={{paddingHorizontal: 10}}>
+                -12%
+              </Text>
+            </Block>
+            <Block row center flex={false}>
+              <Text caption bold primary style={{paddingHorizontal: 10}}>
+                +49%
+              </Text>
+              <Text h1> 481</Text>
+            </Block>
+          </Block>
+          <Block flex={0.5} center row space="between" style={{paddingHorizontal: 30}}>
+              <Text caption light>Available</Text>
+              <Text caption light>Requests</Text>
+          </Block>
+          <Block flex={1}>
+            {this.renderChart()}
+          </Block>
+        </Block>
+    </Block>
+    );
+  }
+
+  renderRequest(request){
+    return(
+      <Block row card shadow color="white" style={styles.request}>
+        <Block flex={0.25} card column color="secondary" style={styles.requestStatus}>
+          <Block flex={0.25} middle center color={theme.colors.primary}>
+            <Text small color="white" style={{textTransform: 'uppercase'}} >{request.status}</Text>
+          </Block>
+          <Block flex={0.7} center middle>
+            <Text h2 white>{request.bloodType}</Text> 
+          </Block>
+        </Block>
+        <Block flex={0.75} column middle>
+          <Text bold h3 style={{paddingVertical: 8}}>{request.name}</Text>
+          <Text caption semibold>
+            {request.age}  •  {request.gender}  •  {request.distance}km  •  {request.duration}hrs
+          </Text>
+        </Block>
+      </Block>
+    );
+  }
+
+  renderRequests() {
+    const { requests } = this.props;
+    return (
+      <Block flex={0.8} column color="gray" style={styles.requests}>
+        <Block flex={false} row space="between" style={styles.requestHeader}>
+        <Text light>Recent Updates</Text>
+          <TouchableOpacity activeOpacity={0.8}> 
+            <Text semibold>View All</Text>
+          </TouchableOpacity>
+        </Block>
+        <ScrollView>
+          { requests.map(request => (
+            <TouchableOpacity activeOpacity={0.8} key={`request-${request.id}`}>
+              {this.renderRequest(request)}
+            </TouchableOpacity>
+            ))}
+        </ScrollView>
+      </Block>
+    )
+  }
 }
 
+App.defaultProps = {
+  user: mock.user,
+  requests: mock.requests,
+  chart: mock.chart,
+};
+
 const styles = StyleSheet.create({
-picker: {
-  borderWidth:1,
-  borderColor: '#848484',
-  marginLeft: 60,
-  marginRight: 60,
-  marginBottom: 10,
-}
-});
+  safe: {
+    flex: 1,
+    backgroundColor: theme.colors.primary,
+  },
+  headerChart: {
+    paddingTop: 30,
+    paddingBottom: 30, 
+    zIndex: 1,
+  },
+  avatar: {
+    width: 25,
+    height: 25,
+    borderRadius: 25/2,
+    marginRight: 10,
+  },
+  requests: {
+    marginTop: -55,
+    paddingTop: 55 + 20,
+    paddingHorizontal: 15,
+    zIndex: -1,
+  },
+  request: {
+    padding: 20,
+    marginBottom: 15,
+  },
+  requestStatus: {
+    marginRight: 20,
+    overflow: 'hidden',
+    height: 90,
+  },
+  requestHeader: {
+    paddingHorizontal: 20,
+    paddingBottom: 15
+  },
+})
